@@ -1,0 +1,61 @@
+version: '3'
+services:
+  jenkins:
+    build: ./jenkins
+    container_name: jenkins
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - test-network
+
+  appium:
+    build: ./appium
+    container_name: appium
+    ports:
+      - "4723:4723"
+    networks:
+      - test-network
+
+  android-emulator:
+    image: budtmo/docker-android
+    container_name: android-emulator
+    privileged: true
+    ports:
+      - "6080:6080"
+      - "5554:5554"
+      - "5555:5555"
+    networks:
+      - test-network
+    environment:
+      - DEVICE="Samsung Galaxy S6"
+      - APPIUM=true
+
+  test-runner:
+    image: python:3.12.0
+    container_name: test-runner
+    volumes:
+      - ./tests:/tests
+    working_dir: /tests
+    command: ["tail", "-f", "/dev/null"]
+    networks:
+      - test-network
+  dozzle:
+    image: amir20/dozzle:latest
+    restart: always
+    container_name: dozzle
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    ports:
+      - "2004:8080"
+    networks:
+     - test-network
+
+volumes:
+  jenkins_home:
+
+networks:
+  test-network:

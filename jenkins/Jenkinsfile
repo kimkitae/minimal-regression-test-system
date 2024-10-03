@@ -1,0 +1,56 @@
+pipeline {
+    agent {
+        docker {
+            image 'python:3.12.0'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git 'https://your-repo-url.git' // 자신의 리포지토리 URL로 변경
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh 'pip install -r tests/requirements.txt'
+            }
+        }
+        stage('Wait for Appium and Emulator') {
+            steps {
+                script {
+                    // Appium 서버가 준비될 때까지 대기
+                    sh '''
+                    while ! nc -z appium 4723; do sleep 1; done
+                    '''
+                    // 에뮬레이터가 부팅될 때까지 대기
+                    sh '''
+                    adb connect android-emulator:5555
+                    boot_completed=""
+                    while [ -z "$boot_completed" ]; do
+                      boot_completed=$(adb -s android-emulator:5555 shell getprop sys.boot_completed 2>&1 | tr -d '\r')
+                      sleep 1
+                    done
+                    '''
+                }
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                sh '''
+                pytest --alluredir=./results tests/test_app.py
+                '''
+            }
+        }
+        stage('Generate Allure Report') {
+            steps {
+                allure includeProperties: false, jdk: '', results: [[path: 'results']]
+            }
+        }
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: '**/results/**', fingerprint: true
+        }
+    }
+}
