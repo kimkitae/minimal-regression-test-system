@@ -9,7 +9,7 @@ RUN apt-get update && \
 # 호스트의 docker 그룹의 GID를 가져옵니다.
 ARG DOCKER_GID=999
 RUN groupadd -g ${DOCKER_GID} docker && \
-    usermod -aG docker jenkins
+    usermod -aG docker jenkins || true
 
 # Jenkins 플러그인 설치
 RUN jenkins-plugin-cli --plugins allure-jenkins-plugin docker-workflow
